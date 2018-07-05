@@ -35,7 +35,7 @@ class Roy < SlackbotFrd::Bot
   def add_callbacks(slack_connection)
     slack_connection.on_message do |user:, channel:, message:, timestamp:, thread_ts:|
       if (message && desired_channel?(channel) && user != :bot && timestamp != thread_ts) &&
-         (resp = response(sc: slack_connection, user: user, message: message))
+         (resp = response(sc: slack_connection, user: user, message: message, thread_ts: thread_ts))
         slack_connection.send_message(
           channel: channel,
           message: resp,
@@ -48,9 +48,9 @@ class Roy < SlackbotFrd::Bot
     end
   end
 
-  def response(sc:, user:, message:)
+  def response(sc:, user:, message:, thread_ts:)
     return nil unless message
-    return OFFLINE_MESSAGE unless during_business_hours?
+    return OFFLINE_MESSAGE unless during_business_hours? || thread_ts
     m = message.downcase
     if contains_ticket?(m)
       SlackbotFrd::Log.info("User '#{user}' is attempting to open an IT ticket through Roy. message: '#{message}'")
