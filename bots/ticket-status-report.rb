@@ -7,39 +7,47 @@ require_relative './gerrit-jira-translator'
 
 require_relative '../lib/gerrit-jira-translator/data'
 
-class Feedback < SlackbotFrd::Bot
+class TicketStatusReport < SlackbotFrd::Bot
   GERRIT_ID_FIELD = "customfield_10403"
+  FEEDBACK_REGEX = /!feedback\s+(.+)$/i
+  QA_REGEX = /!qa\s+(.+)$/i
 
-  def contains_trigger(message)
+  def contains_feedback_trigger?(message)
     message =~ /(!feedback)/i
   end
 
-  def feedback_jql(project)
-    "project = #{project} AND status = Feedback ORDER BY updated ASC"
+  def contains_qa_trigger?(message)
+    message =~ /(!qa)/i
+  end
+
+  def jql(project, status = 'Feedback')
+    "project = #{project} AND status = '#{status}' ORDER BY updated ASC"
   end
 
   def add_callbacks(slack_connection)
     slack_connection.on_message do |user:, channel:, message:, timestamp:, thread_ts:|
-      if message && user != 'angel' && timestamp != thread_ts && contains_trigger(message)
-        handle_feedback_jiras(slack_connection, user, channel, message, thread_ts)
+      if message && user != 'angel' && timestamp != thread_ts &&
+        ((feedback = contains_feedback_trigger?(message)) || (qa = contains_qa_trigger?(message)))
+          handle_jiras(slack_connection, user, channel, message, thread_ts, is_feedback: feedback, is_qa: qa)
       end
     end
   end
 
-  def handle_feedback_jiras(slack_connection, user, channel, message, thread_ts)
+  def handle_jiras(slack_connection, user, channel, message, thread_ts, is_feedback:, is_qa:)
     parser = GerritJiraTranslator.new
     search_api = Jira::Search.new(
       username: $slackbotfrd_conf['jira_username'],
       password: $slackbotfrd_conf['jira_password']
     )
-    /!feedback\s+(.+)$/i.match(message) do |matches|
+
+    (is_feedback ? FEEDBACK_REGEX : QA_REGEX).match(message) do |matches|
       matches[1].split.each do |project|
         project.gsub!(/[^\w\s]/, '')
         if project =~ /#{parser.whitelisted_prefixes}/i
-          issues = search_api.get feedback_jql(project)
+          issues = search_api.get (is_feedback ? jql(project, "Feedback") : jql(project, "QA Ready"))
           slack_connection.send_message(
             channel: channel,
-            message: parse_issues(issues, project),
+            message: parse_issues(issues, project, (is_feedback ? "feedback" : "QA")),
             parse: 'none',
             thread_ts: thread_ts
           )
@@ -48,11 +56,11 @@ class Feedback < SlackbotFrd::Bot
     end
   end
 
-  def parse_issues(issues_json, project)
+  def parse_issues(issues_json, project, status)
     parser = GerritJiraTranslator.new
     messages = []
-    issues = issues_json["issues"]
-    SlackbotFrd::Log.info("Parsing #{issues_json} for feedback:")
+    issues = issues_json["issues"] || []
+    SlackbotFrd::Log.info("Parsing #{issues_json} for #{status}:")
     SlackbotFrd::Log.info(issues)
     issues.each do |issue|
       SlackbotFrd::Log.info("Parsing issue:")
@@ -70,7 +78,7 @@ class Feedback < SlackbotFrd::Bot
       end
       messages << "\n"
     end
-    messages << "No issues awaiting feedback found for #{project}" if messages.empty?
+    messages << "No issues awaiting #{status} found for #{project}" if issues.empty?
     messages.join("\n")
   end
 end
