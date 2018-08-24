@@ -66,15 +66,19 @@ class TicketStatusReport < SlackbotFrd::Bot
       SlackbotFrd::Log.info("Parsing issue:")
       SlackbotFrd::Log.info(issue)
       f = issue["fields"]
-      gerrits = f[GERRIT_ID_FIELD]
-                .split
-                .select {|s| s =~ /http/}
-                .map {|url| url.split("/").last}
+      if (gerrit_field = f[GERRIT_ID_FIELD])
+        gerrits = gerrit_field
+                  .split
+                  .select {|s| s =~ /http/}
+                  .map {|url| url.split("/").last}
+      end
       jira = {prefix: issue["key"].split("-").first, number: issue["key"].split("-").last}
       messages << "#{parser.priority_str(issue)} #{parser.jira_link(jira)} - #{f["summary"]}"
       messages << "*Assigned to*: #{parser.assigned_to_str(issue)}"
-      gerrits.each do |gerrit|
-        messages << ":gerrit: :  <#{parser.gerrit_url(gerrit)}|g/#{gerrit}> : <#{parser.gerrit_mobile_url(gerrit)}|:iphone:>"
+      if gerrit_field
+        gerrits.each do |gerrit|
+          messages << ":gerrit: :  <#{parser.gerrit_url(gerrit)}|g/#{gerrit}> : <#{parser.gerrit_mobile_url(gerrit)}|:iphone:>"
+        end
       end
       messages << "\n"
     end
