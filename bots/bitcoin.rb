@@ -26,7 +26,9 @@ class BitcoinBot < SlackbotFrd::Bot
   end
 
   def contains_trigger(message)
-    message =~ /:(bitcoin|btc):/i
+    # message =~ /:(bitcoin|btc):/i
+    # Disabled, part of the slack platform now.
+    false
   end
 
   def add_callbacks(slack_connection)
