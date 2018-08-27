@@ -17,9 +17,9 @@ class DadjokeBot < SlackbotFrd::Bot
   end
 
   def contains_trigger(message)
-    false
     # message =~ /:dadjokes?:/i
     # Disabled, part of the slack platform now.
+    false
   end
 
   def add_callbacks(slack_connection)
