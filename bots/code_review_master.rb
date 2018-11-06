@@ -88,6 +88,8 @@ class CodeReviewMasterBot < SlackbotFrd::Bot
           help = <<-HELP_TEXT
 Hi! I help assign code reviewers.
 
+All these commands you should type in the channel, I'm just DMing you to avoid spamming others!
+
 *Assign a reviewer*
 
 `codereviewmaster g/123456`
@@ -133,7 +135,8 @@ Removes all reviewers
 
 Outputs this text
           HELP_TEXT
-          m.send_message(help)
+          slack_connection.send_im(user: user, message: help)
+          m.send_message(message: "I'll DM #{user} the info")
         end
 
         #####################
