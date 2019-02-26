@@ -12,15 +12,17 @@ class GerritJiraTranslator < SlackbotFrd::Bot
   end
 
   def add_callbacks(slack_connection)
-    slack_connection.on_message do |user:, channel:, message:, timestamp:, thread_ts:|
-      if message && user != :bot && user != 'angel' && timestamp != thread_ts
-        if contains_command(message)
-          handle_command(slack_connection, user, channel, message, thread_ts)
-        elsif contains_gerrits(message) || contains_jiras(message)
-          handle_gerrits_jiras(slack_connection, user, channel, message, thread_ts)
-        end
-      end
-    end
+    # Disabled, part of the slack platform now.
+    return
+    #slack_connection.on_message do |user:, channel:, message:, timestamp:, thread_ts:|
+    #  if message && user != :bot && user != 'angel' && timestamp != thread_ts
+    #    if contains_command(message)
+    #      handle_command(slack_connection, user, channel, message, thread_ts)
+    #    elsif contains_gerrits(message) || contains_jiras(message)
+    #      handle_gerrits_jiras(slack_connection, user, channel, message, thread_ts)
+    #    end
+    #  end
+    #end
   end
 
   def handle_command(slack_connection, user, channel, message, thread_ts)
